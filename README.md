@@ -1,28 +1,3 @@
-这是一个为你定制的项目描述和 `README.md` 文件模板。你可以直接复制到 GitHub 仓库中。
-
-此文档详细涵盖了**Python版本**、**Infinicloud Cookie 持久化**以及**WxPusher 推送**的所有特性。
-
----
-
-### 1. 项目描述 (Project Description)
-*适用于 GitHub 仓库右侧的 "About" 区域*
-
-**中文描述：**
-基于 Python 和 GitHub Actions 的 HidenCloud 自动续期与支付脚本。支持 Cookie 自动通过 Infinicloud (WebDAV) 进行持久化同步，允许仓库公开（Public）部署而不泄露敏感数据。集成 WxPusher 消息推送，支持多账号管理。
-
-**English Description:**
-Automated renewal and payment script for HidenCloud using Python and GitHub Actions. Features secure Cookie persistence via Infinicloud (WebDAV), allowing for Public repository deployment. Includes WxPusher notifications and multi-account support.
-
-**Tags (标签建议):**
-`python` `github-actions` `automation` `hidencloud` `webdav` `wxpusher` `auto-renew`
-
----
-
-### 2. README.md 文件内容
-
-请在仓库根目录下创建一个名为 `README.md` 的文件，并将以下内容复制进去：
-
-```markdown
 # HidenCloud Auto Renew (Python版)
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)
