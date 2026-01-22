@@ -210,6 +210,10 @@ class HidenCloudBot:
                 return False
 
             soup = BeautifulSoup(res.text, 'html.parser')
+
+            # =========== 新增这一行进行调试 ===========
+            print(f"👀 [调试] 网页标题是: {soup.title.string if soup.title else '无标题'}")
+            # ========================================
             
             # 提取 CSRF Token
             token_tag = soup.find('meta', attrs={'name': 'csrf-token'})
