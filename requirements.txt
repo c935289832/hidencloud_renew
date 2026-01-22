@@ -1,2 +1,2 @@
-requests
+cloudscraper
 beautifulsoup4
