@@ -240,12 +240,46 @@ class HidenCloudBot:
         self.log(f">>> 处理服务 ID: {service['id']}")
 
         try:
+            # 1. 获取管理页面
             manage_res = self.request('GET', f"/service/{service['id']}/manage")
             soup = BeautifulSoup(manage_res.text, 'html.parser')
+
+            # ================== 新增：检测是否允许续期 ==================
+            import re
+            
+            # 查找 onclick 属性中包含 showRenewAlert 的按钮
+            renew_btn = soup.find('button', onclick=re.compile(r'showRenewAlert'))
+            
+            if renew_btn:
+                onclick_val = renew_btn['onclick']
+                # 正则提取参数: showRenewAlert(15, 1, true)
+                # Group 1: 剩余天数, Group 2: 阈值, Group 3: 是否免费
+                match = re.search(r'showRenewAlert\((\d+),\s*(\d+),\s*(true|false)\)', onclick_val)
+                
+                if match:
+                    days_until = int(match.group(1))
+                    threshold = int(match.group(2))
+                    is_free = match.group(3) == 'true'
+
+                    # 模拟网页 JS 逻辑判断
+                    if days_until > threshold:
+                        threshold_text = "1 day" if threshold == 1 else f"{threshold} days"
+                        
+                        if is_free:
+                            msg = f"You can only renew your free service when there is less than {threshold_text} left before it expires. Your service expires in {days_until} days."
+                        else:
+                            msg = f"You can only renew your service when there is less than {threshold_text} left before it expires. Your service expires in {days_until} days."
+                        
+                        # 打印提示并跳过续期
+                        self.log(f"⏳ 暂未到达续期时间: {msg}")
+                        return # <--- 关键：直接结束当前函数，不执行后续 POST
+            # ==========================================================
+
+            # 如果没有被拦截，继续寻找 Form Token
             token_input = soup.find('input', attrs={'name': '_token'})
             
             if not token_input:
-                self.log("❌ 无法找到续期 Token")
+                self.log(f"❌ 无法找到续期 Token (可能是服务已到期或页面结构变更)")
                 return
 
             form_token = token_input['value']
@@ -264,7 +298,7 @@ class HidenCloudBot:
                 self.log("⚡️ 续期成功，前往支付")
                 self.perform_pay_from_html(res.text, res.url)
             else:
-                self.log("⚠️ 续期后未跳转，检查列表...")
+                self.log("⚠️ 续期请求已发送，检查账单...")
                 self.check_and_pay_invoices(service['id'])
 
         except Exception as e:
