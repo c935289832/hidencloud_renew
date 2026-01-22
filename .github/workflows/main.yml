@@ -19,7 +19,7 @@ jobs:
 
       # === 新增这一步：安装 WARP ===
     - name: Install Cloudflare WARP
-      uses: fscarmen/warp-on-actions@v1.1
+      uses: fscarmen/warp-on-actions@v1.4
       with:
         stack: ipv4 # 强制使用 WARP 的 IPv4
     # ===========================
