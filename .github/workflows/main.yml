@@ -1,0 +1,43 @@
+name: HidenCloud Auto Renew (Python)
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每天北京时间 10:00 (UTC 02:00)
+    - cron: '0 2 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+        cache: 'pip'
+
+    - name: Install Dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Run Script
+      env:
+        # HidenCloud Cookie
+        HIDEN_COOKIE: ${{ secrets.HIDEN_COOKIE }}
+        
+        # WxPusher 配置
+        WP_APP_TOKEN_ONE: ${{ secrets.WP_APP_TOKEN_ONE }}
+        WP_UIDs: ${{ secrets.WP_UIDs }}
+        
+        # Infinicloud WebDAV 配置
+        WEBDAV_URL: ${{ secrets.WEBDAV_URL }}
+        WEBDAV_USER: ${{ secrets.WEBDAV_USER }}
+        WEBDAV_PASS: ${{ secrets.WEBDAV_PASS }}
+      run: python main.py
