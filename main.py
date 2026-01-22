@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-HidenCloud 自动续期 - Python Infinicloud版
+HidenCloud 自动续期 - Python 全日志推送版
 """
 import os
 import sys
@@ -8,14 +8,25 @@ import time
 import json
 import random
 import requests
-import cloudscraper
+import cloudscraper # 必须保留，因为你已经用了 Cloudflare 绕过
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
 # ================= 配置常量 =================
-RENEW_DAYS = 7
+RENEW_DAYS = 7  # 根据你截图里是7天，这里改成了7
 CACHE_FILE_NAME = 'hiden_cookies.json'
 LOCAL_CACHE_PATH = os.path.join(os.path.dirname(__file__), CACHE_FILE_NAME)
+
+# ================= 全局日志收集器 =================
+ALL_LOGS = []
+
+def log_print(msg):
+    """
+    既打印到控制台，也记录到内存供推送使用
+    """
+    print(msg)
+    # 将日志加入全局列表
+    ALL_LOGS.append(str(msg))
 
 # ================= 消息推送模块 =================
 def send_notify(text, desp):
@@ -23,20 +34,20 @@ def send_notify(text, desp):
     uids_str = os.environ.get("WP_UIDs")
     
     if not token or not uids_str:
-        print("⚠️ 未配置 WxPusher，跳过推送")
+        log_print("⚠️ 未配置 WxPusher，跳过推送")
         return
 
-    print(f"\n==== 开始推送通知: {text} ====\n")
+    log_print(f"\n==== 开始推送通知: {text} ====\n")
     
-    # 处理分隔符: 支持逗号、分号、换行
     import re
     uids = [u.strip() for u in re.split(r'[,;\n]', uids_str) if u.strip()]
     
     url = 'https://wxpusher.zjiecode.com/api/send/message'
     data = {
         "appToken": token,
-        "content": f"<h3>{text}</h3><br>{desp.replace(chr(10), '<br>')}",
-        "summary": text,
+        # 将日志列表拼接成 HTML 格式，换行符转 <br>
+        "content": f"<h3>{text}</h3><br><div style='font-size:14px;'>{desp.replace(chr(10), '<br>')}</div>",
+        "summary": text, # 消息列表摘要
         "contentType": 2, # HTML
         "uids": uids
     }
@@ -44,7 +55,7 @@ def send_notify(text, desp):
     try:
         res = requests.post(url, json=data)
         if res.status_code == 200:
-            print("✅ WxPusher 推送成功")
+            print("✅ WxPusher 推送成功") # 这里用print不用log_print防止无限套娃
         else:
             print(f"❌ WxPusher 推送响应: {res.text}")
     except Exception as e:
@@ -63,28 +74,28 @@ class WebDavManager:
 
     def download(self):
         if not self.url or not self.user:
-            print("⚠️ 未配置 WebDAV，跳过云端同步")
+            log_print("⚠️ 未配置 WebDAV，跳过云端同步")
             return
             
-        print("☁️ 正在从 Infinicloud 下载缓存...")
+        log_print("☁️ 正在从 Infinicloud 下载缓存...")
         try:
             res = requests.get(self.full_url, auth=(self.user, self.password), timeout=30)
             if res.status_code == 200:
                 with open(LOCAL_CACHE_PATH, 'w', encoding='utf-8') as f:
                     f.write(res.text)
-                print("✅ 云端缓存下载成功")
+                log_print("✅ 云端缓存下载成功")
             elif res.status_code == 404:
-                print("⚪ 云端暂无缓存文件 (首次运行)")
+                log_print("⚪ 云端暂无缓存文件 (首次运行)")
             else:
-                print(f"⚠️ 下载失败，状态码: {res.status_code}")
+                log_print(f"⚠️ 下载失败，状态码: {res.status_code}")
         except Exception as e:
-            print(f"❌ WebDAV 下载错误: {e}")
+            log_print(f"❌ WebDAV 下载错误: {e}")
 
     def upload(self, data):
         if not self.url or not self.user:
             return
         
-        print("☁️ 正在上传最新缓存到 Infinicloud...")
+        log_print("☁️ 正在上传最新缓存到 Infinicloud...")
         try:
             json_str = json.dumps(data, indent=2)
             res = requests.put(
@@ -95,11 +106,11 @@ class WebDavManager:
                 timeout=30
             )
             if res.status_code in [200, 201, 204]:
-                print("✅ 云端缓存上传成功")
+                log_print("✅ 云端缓存上传成功")
             else:
-                print(f"❌ WebDAV 上传失败: {res.status_code}")
+                log_print(f"❌ WebDAV 上传失败: {res.status_code}")
         except Exception as e:
-            print(f"❌ WebDAV 上传错误: {e}")
+            log_print(f"❌ WebDAV 上传错误: {e}")
 
 # ================= 辅助工具 =================
 def sleep_random(min_ms=3000, max_ms=8000):
@@ -114,21 +125,21 @@ class CacheManager:
                 with open(LOCAL_CACHE_PATH, 'r', encoding='utf-8') as f:
                     return json.load(f)
             except:
-                print("读取本地缓存失败")
+                log_print("读取本地缓存失败")
         return {}
 
     @staticmethod
     def update(index, cookie_str):
         dav = WebDavManager()
         data = CacheManager.load()
-        # 索引转字符串key
         key = str(index)
         
+        # 只要调用update就保存，确保最新
         if data.get(key) != cookie_str:
             data[key] = cookie_str
             with open(LOCAL_CACHE_PATH, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2)
-            print(f"💾 [账号 {index + 1}] 本地缓存已更新")
+            log_print(f"💾 [账号 {index + 1}] 本地缓存已更新")
             dav.upload(data)
 
 # ================= 核心机器人类 =================
@@ -137,8 +148,7 @@ class HidenCloudBot:
         self.index = index + 1
         self.base_url = "https://dash.hidencloud.com"
         
-        # 🔥 核心修改：使用 cloudscraper 创建会话
-        # 它能模拟浏览器通过简单的 Cloudflare 验证
+        # 使用 Cloudscraper
         self.session = cloudscraper.create_scraper(
             browser={
                 'browser': 'chrome',
@@ -150,49 +160,21 @@ class HidenCloudBot:
         self.csrf_token = ""
         self.services = []
         
-        # 加载 Cookie (逻辑不变)
+        # 加载 Cookie
         cached_data = CacheManager.load()
         cached_cookie = cached_data.get(str(index))
         
         if cached_cookie:
-            self.log("发现本地缓存 Cookie，优先使用...")
+            log_print(f"[账号 {self.index}] 发现本地缓存 Cookie，优先使用...")
             self.load_cookie_str(cached_cookie)
         else:
-            self.log("使用环境变量 Cookie...")
+            log_print(f"[账号 {self.index}] 使用环境变量 Cookie...")
             self.load_cookie_str(env_cookie)
-# class HidenCloudBot:
-#     def __init__(self, env_cookie, index):
-#         self.index = index + 1
-#         self.base_url = "https://dash.hidencloud.com"
-#         self.session = requests.Session()
-#         self.csrf_token = ""
-#         self.services = []
-        
-#         # 配置 Headers
-#         self.session.headers.update({
-#             'Host': 'dash.hidencloud.com',
-#             'Connection': 'keep-alive',
-#             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-#             'Accept': '*/*',
-#             'Referer': 'https://dash.hidencloud.com/',
-#         })
-
-#         # 加载 Cookie (优先缓存)
-#         cached_data = CacheManager.load()
-#         cached_cookie = cached_data.get(str(index))
-        
-#         if cached_cookie:
-#             self.log("发现本地缓存 Cookie，优先使用...")
-#             self.load_cookie_str(cached_cookie)
-#         else:
-#             self.log("使用环境变量 Cookie...")
-#             self.load_cookie_str(env_cookie)
 
     def log(self, msg):
-        print(f"[账号 {self.index}] {msg}")
+        log_print(f"[账号 {self.index}] {msg}")
 
     def load_cookie_str(self, cookie_str):
-        """解析 cookie 字符串到 session"""
         if not cookie_str:
             return
         cookie_dict = {}
@@ -203,25 +185,20 @@ class HidenCloudBot:
         self.session.cookies.update(cookie_dict)
 
     def get_cookie_str(self):
-        """从 session 导出 cookie 字符串"""
         return '; '.join([f"{c.name}={c.value}" for c in self.session.cookies])
 
     def save_current_cookies(self):
-        """保存当前会话的 Cookie 到缓存"""
         CacheManager.update(self.index - 1, self.get_cookie_str())
 
     def reset_to_env(self, env_cookie):
-        """重置为环境变量 Cookie"""
         self.session.cookies.clear()
         self.load_cookie_str(env_cookie)
         self.log("切换回环境变量原始 Cookie 重试...")
 
     def request(self, method, url, data=None, headers=None):
-        """封装请求，自动处理 URL 和 错误"""
         full_url = urljoin(self.base_url, url)
         try:
             resp = self.session.request(method, full_url, data=data, headers=headers, timeout=30)
-            # 每次请求后尝试更新缓存（如果有新cookie）
             self.save_current_cookies()
             return resp
         except Exception as e:
@@ -233,23 +210,17 @@ class HidenCloudBot:
         try:
             res = self.request('GET', '/dashboard')
             
-            # 检查重定向是否到了登录页
             if '/login' in res.url:
                 self.log("❌ 当前 Cookie 已失效")
                 return False
 
             soup = BeautifulSoup(res.text, 'html.parser')
+            log_print(f"👀 [调试] 网页标题是: {soup.title.string if soup.title else '无标题'}")
 
-            # =========== 新增这一行进行调试 ===========
-            print(f"👀 [调试] 网页标题是: {soup.title.string if soup.title else '无标题'}")
-            # ========================================
-            
-            # 提取 CSRF Token
             token_tag = soup.find('meta', attrs={'name': 'csrf-token'})
             if token_tag:
                 self.csrf_token = token_tag['content']
 
-            # 解析服务列表
             self.services = []
             for a in soup.find_all('a', href=True):
                 href = a['href']
@@ -269,7 +240,6 @@ class HidenCloudBot:
         self.log(f">>> 处理服务 ID: {service['id']}")
 
         try:
-            # 1. 获取管理页面 (提取 form token)
             manage_res = self.request('GET', f"/service/{service['id']}/manage")
             soup = BeautifulSoup(manage_res.text, 'html.parser')
             token_input = soup.find('input', attrs={'name': '_token'})
@@ -282,11 +252,7 @@ class HidenCloudBot:
             self.log(f"提交续期 ({RENEW_DAYS}天)...")
             sleep_random(1000, 2000)
 
-            # 2. 提交续期请求
-            payload = {
-                '_token': form_token,
-                'days': RENEW_DAYS
-            }
+            payload = {'_token': form_token, 'days': RENEW_DAYS}
             headers = {
                 'X-CSRF-TOKEN': self.csrf_token,
                 'Referer': f"https://dash.hidencloud.com/service/{service['id']}/manage"
@@ -341,7 +307,6 @@ class HidenCloudBot:
         target_form = None
         target_action = ""
 
-        # 查找包含 "pay" 按钮的表单
         for form in soup.find_all('form'):
             btn = form.find('button')
             if btn and 'pay' in btn.get_text().lower():
@@ -355,7 +320,6 @@ class HidenCloudBot:
             self.log("⚪ 页面未找到支付表单 (可能已支付)。")
             return
 
-        # 提取表单数据
         payload = {}
         for inp in target_form.find_all('input'):
             name = inp.get('name')
@@ -365,10 +329,7 @@ class HidenCloudBot:
 
         self.log("👉 提交支付...")
         try:
-            headers = {
-                'X-CSRF-TOKEN': self.csrf_token,
-                'Referer': current_url
-            }
+            headers = {'X-CSRF-TOKEN': self.csrf_token, 'Referer': current_url}
             res = self.request('POST', target_action, data=payload, headers=headers)
             
             if res.status_code == 200:
@@ -380,44 +341,39 @@ class HidenCloudBot:
 
 # ================= 主程序 =================
 if __name__ == '__main__':
-    # 从环境变量读取
     env_cookies = os.environ.get("HIDEN_COOKIE", "")
     import re
     cookies_list = re.split(r'[&\n]', env_cookies)
     cookies_list = [c for c in cookies_list if c.strip()]
 
     if not cookies_list:
-        print("❌ 未配置环境变量 HIDEN_COOKIE")
+        log_print("❌ 未配置环境变量 HIDEN_COOKIE")
         sys.exit(0)
 
-    # 1. 下载云端缓存
     WebDavManager().download()
 
-    print(f"\n=== HidenCloud 续期脚本启动 (Python版) ===")
-    summary_msg = ""
+    log_print(f"\n=== HidenCloud 续期脚本启动 (Python版) ===")
 
     for i, cookie in enumerate(cookies_list):
         bot = HidenCloudBot(cookie, i)
-        
         success = bot.init()
         
-        # 失败重试（回退到环境变量）
         if not success:
             bot.reset_to_env(cookie)
             success = bot.init()
 
         if success:
-            msg = f"账号 {i + 1}: 登录成功，服务数: {len(bot.services)}"
-            summary_msg += msg + "\n"
             for service in bot.services:
                 bot.process_service(service)
         else:
-            msg = f"账号 {i + 1}: 登录失败，请检查 Cookie"
-            summary_msg += msg + "\n"
+            log_print(f"账号 {i + 1}: 登录失败，请检查 Cookie")
         
-        print("\n----------------------------------------\n")
+        log_print("\n----------------------------------------\n")
         if i < len(cookies_list) - 1:
             sleep_random(5000, 10000)
 
-    if summary_msg:
-        send_notify("HidenCloud 续期报告", summary_msg)
+    # 推送所有日志
+    # 将日志数组合并成一个字符串
+    final_content = "\n".join(ALL_LOGS)
+    if final_content:
+        send_notify("HidenCloud 续期报告", final_content)
