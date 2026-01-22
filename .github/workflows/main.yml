@@ -17,6 +17,13 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
+      # === 新增这一步：安装 WARP ===
+    - name: Install Cloudflare WARP
+      uses: fscarmen/warp-on-actions@v1.1
+      with:
+        stack: ipv4 # 强制使用 WARP 的 IPv4
+    # ===========================
+
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
