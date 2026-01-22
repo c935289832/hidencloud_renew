@@ -8,6 +8,7 @@ import time
 import json
 import random
 import requests
+import cloudscraper
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
 
@@ -135,20 +136,21 @@ class HidenCloudBot:
     def __init__(self, env_cookie, index):
         self.index = index + 1
         self.base_url = "https://dash.hidencloud.com"
-        self.session = requests.Session()
+        
+        # 🔥 核心修改：使用 cloudscraper 创建会话
+        # 它能模拟浏览器通过简单的 Cloudflare 验证
+        self.session = cloudscraper.create_scraper(
+            browser={
+                'browser': 'chrome',
+                'platform': 'windows',
+                'desktop': True
+            }
+        )
+        
         self.csrf_token = ""
         self.services = []
         
-        # 配置 Headers
-        self.session.headers.update({
-            'Host': 'dash.hidencloud.com',
-            'Connection': 'keep-alive',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
-            'Accept': '*/*',
-            'Referer': 'https://dash.hidencloud.com/',
-        })
-
-        # 加载 Cookie (优先缓存)
+        # 加载 Cookie (逻辑不变)
         cached_data = CacheManager.load()
         cached_cookie = cached_data.get(str(index))
         
@@ -158,6 +160,33 @@ class HidenCloudBot:
         else:
             self.log("使用环境变量 Cookie...")
             self.load_cookie_str(env_cookie)
+# class HidenCloudBot:
+#     def __init__(self, env_cookie, index):
+#         self.index = index + 1
+#         self.base_url = "https://dash.hidencloud.com"
+#         self.session = requests.Session()
+#         self.csrf_token = ""
+#         self.services = []
+        
+#         # 配置 Headers
+#         self.session.headers.update({
+#             'Host': 'dash.hidencloud.com',
+#             'Connection': 'keep-alive',
+#             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36',
+#             'Accept': '*/*',
+#             'Referer': 'https://dash.hidencloud.com/',
+#         })
+
+#         # 加载 Cookie (优先缓存)
+#         cached_data = CacheManager.load()
+#         cached_cookie = cached_data.get(str(index))
+        
+#         if cached_cookie:
+#             self.log("发现本地缓存 Cookie，优先使用...")
+#             self.load_cookie_str(cached_cookie)
+#         else:
+#             self.log("使用环境变量 Cookie...")
+#             self.load_cookie_str(env_cookie)
 
     def log(self, msg):
         print(f"[账号 {self.index}] {msg}")
