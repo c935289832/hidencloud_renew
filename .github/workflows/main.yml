@@ -1,13 +1,14 @@
+# 文件路径: .github/workflows/main.yml
 name: HidenCloud Auto Renew (Python)
 
 on:
   workflow_dispatch:
   schedule:
-    # 每天北京时间 10:00 (UTC 02:00)
-    - cron: '*/5 * * * *'
+    # 初始时间，脚本会自动修改这个分钟数
+    - cron: '30 2 * * *'
 
 permissions:
-  contents: read
+  contents: read # 主脚本只需要读权限，修改权限交给 cron.yml
 
 jobs:
   run-script:
@@ -17,12 +18,10 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-      # === 新增这一步：安装 WARP ===
     - name: Install Cloudflare WARP
       uses: fscarmen/warp-on-actions@v1.4
       with:
-        stack: ipv4 # 强制使用 WARP 的 IPv4
-    # ===========================
+        stack: ipv4
 
     - name: Setup Python
       uses: actions/setup-python@v5
@@ -36,14 +35,9 @@ jobs:
 
     - name: Run Script
       env:
-        # HidenCloud Cookie
         HIDEN_COOKIE: ${{ secrets.HIDEN_COOKIE }}
-        
-        # WxPusher 配置
         WP_APP_TOKEN_ONE: ${{ secrets.WP_APP_TOKEN_ONE }}
         WP_UIDs: ${{ secrets.WP_UIDs }}
-        
-        # Infinicloud WebDAV 配置
         WEBDAV_URL: ${{ secrets.WEBDAV_URL }}
         WEBDAV_USER: ${{ secrets.WEBDAV_USER }}
         WEBDAV_PASS: ${{ secrets.WEBDAV_PASS }}
