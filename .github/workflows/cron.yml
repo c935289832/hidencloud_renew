@@ -1,0 +1,46 @@
+# 文件路径: .github/workflows/cron.yml
+name: Update Schedule
+
+on:
+  workflow_run:
+    # 监听主脚本，当主脚本运行完成后触发
+    workflows: ["HidenCloud Auto Renew (Python)"]
+    types:
+      - completed
+
+permissions:
+  contents: write # 必须赋予写权限，以便修改 main.yml
+
+jobs:
+  update-cron:
+    runs-on: ubuntu-latest
+    # 仅当主脚本成功运行后才修改时间（避免主脚本报错了还瞎改时间）
+    if: github.event.workflow_run.conclusion == 'success'
+    
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          ref: main # 确保拉取的是主分支
+
+      - name: Randomize Cron & Commit
+        run: |
+          # 生成 0-59 之间的随机数
+          RANDOM_MINUTE=$(($RANDOM % 59))
+          
+          # 使用 sed 修改 main.yml 中的 cron 分钟数
+          # 匹配规则：查找 "- cron: '" 开头，后面跟数字，替换为新的随机数字
+          sed -i -E "s/(- cron: ')[0-9]+( .*')/\1${RANDOM_MINUTE}\2/g" .github/workflows/main.yml
+          
+          echo "📅 下次运行分钟数已修改为: ${RANDOM_MINUTE}"
+
+          # 配置 Git 信息
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          # 提交并推送
+          git add .github/workflows/main.yml
+          
+          # [skip ci] 表示这次提交不触发 CI，防止死循环（虽然 workflow_run 不受此影响，但加上是个好习惯）
+          git commit -m "Update cron schedule to minute $RANDOM_MINUTE [skip ci]" || exit 0
+          git push
