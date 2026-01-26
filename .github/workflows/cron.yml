@@ -1,41 +1,23 @@
-name: Update Schedule
-
+name: Random Cron
 on:
   workflow_run:
     workflows: ["HidenCloud Auto Renew (Python)"]
     types:
       - completed
-
-permissions:
-  contents: write
-
 jobs:
-  update-cron:
+  repo-sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     if: github.event.workflow_run.conclusion == 'success'
-    
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v2
         with:
-          ref: main
-          # 🔥 关键修改：使用你的 PAT 令牌，而不是默认的 github-token
-          token: ${{ secrets.PAT }}
-
-      - name: Randomize Cron & Commit
+          token: ${{ secrets.PAT }} #此处PAT需要申请，教程详见：https://www.jianshu.com/p/bb82b3ad1d11,需要repo和workflow权限
+      - name: random cron
         run: |
-          RANDOM_MINUTE=$(($RANDOM % 59))
-          
-          # 修改 main.yml 的时间
-          sed -i -E "s/(- cron: ')[0-9]+( .*')/\1${RANDOM_MINUTE}\2/g" .github/workflows/main.yml
-          
-          echo "📅 下次运行分钟数已修改为: ${RANDOM_MINUTE}"
-
-          # 配置 Git 信息
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          
-          # 提交并推送
-          git add .github/workflows/main.yml
-          git commit -m "Update cron schedule to minute $RANDOM_MINUTE [skip ci]" || exit 0
-          git push
+          sed -i -E "s/(- cron: ')[0-9]+( [^[:space:]]+ \* \* \*')/\1$(($RANDOM % 59))\2/g" .github/workflows/run.yml
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "random cron"
+          git push origin master
