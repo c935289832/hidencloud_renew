@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   schedule:
     # 初始时间，脚本会自动修改这个分钟数
-    - cron: '41 2 * * *'
+    - cron: '45 2 * * *'
 
 permissions:
   contents: read # 主脚本只需要读权限，修改权限交给 cron.yml
