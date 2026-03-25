@@ -26,7 +26,7 @@
 
 *   **GitHub 账号**：用于 Fork 本项目。
 *   **HidenCloud 账号**：获取初始 Cookie。
-*   **Infinicloud 账号**：[注册地址](https://infinicloud.com/)，用于存储 Cookie JSON 文件。
+*   **Infinicloud 账号**：[注册地址](https://infini-cloud.net/)，用于存储 Cookie JSON 文件。
 *   **WxPusher**：[注册地址](https://wxpusher.zjiecode.com/admin/)，用于接收通知。
 
 ### 2. 获取配置信息
