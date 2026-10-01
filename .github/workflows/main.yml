@@ -181,9 +181,13 @@ jobs:
         exit "$code"
 
     - name: Discord Notification
-      if: always() && secrets.WEBHOOK_URL != ''
+      if: always()
+      env:
+        WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
       run: |
-        curl -H "Content-Type: application/json" \
-             -X POST \
-             -d "{\"content\": \"🟢 **HidenCloud Bot**: ¡El servidor de Minecraft fue verificado y renovado exitosamente en HidenCloud! 🎮\"}" \
-             "${{ secrets.WEBHOOK_URL }}"
+        if [ -n "$WEBHOOK_URL" ]; then
+          curl -H "Content-Type: application/json" \
+               -X POST \
+               -d "{\"content\": \"🟢 **HidenCloud Bot**: ¡El servidor de Minecraft fue verificado y renovado exitosamente en HidenCloud! 🎮\"}" \
+               "$WEBHOOK_URL"
+        fi
