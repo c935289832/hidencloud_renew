@@ -18,11 +18,6 @@ jobs:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    # - name: Install Cloudflare WARP
-    #   uses: fscarmen/warp-on-actions@v1.4
-    #   with:
-    #     stack: ipv4
-
     - name: Setup Python
       uses: actions/setup-python@v5
       with:
@@ -104,10 +99,10 @@ jobs:
         FSKEY: ${{ secrets.FSKEY }}
         FSSECRET: ${{ secrets.FSSECRET }}
         WEBHOOK_URL: ${{ secrets.WEBHOOK_URL }}
-        WEBHOOK_BODY: ${{ secrets.WEBHOOK_BODY }}
-        WEBHOOK_HEADERS: ${{ secrets.WEBHOOK_HEADERS }}
-        WEBHOOK_METHOD: ${{ secrets.WEBHOOK_METHOD }}
-        WEBHOOK_CONTENT_TYPE: ${{ secrets.WEBHOOK_CONTENT_TYPE }}
+        WEBHOOK_BODY: ${{ vars.WEBHOOK_BODY || secrets.WEBHOOK_BODY }}
+        WEBHOOK_HEADERS: ${{ vars.WEBHOOK_HEADERS || secrets.WEBHOOK_HEADERS }}
+        WEBHOOK_METHOD: ${{ vars.WEBHOOK_METHOD || secrets.WEBHOOK_METHOD }}
+        WEBHOOK_CONTENT_TYPE: ${{ vars.WEBHOOK_CONTENT_TYPE || secrets.WEBHOOK_CONTENT_TYPE }}
         CHRONOCAT_QQ: ${{ secrets.CHRONOCAT_QQ }}
         CHRONOCAT_TOKEN: ${{ secrets.CHRONOCAT_TOKEN }}
         CHRONOCAT_URL: ${{ secrets.CHRONOCAT_URL }}
@@ -184,3 +179,11 @@ jobs:
         } >> "$GITHUB_STEP_SUMMARY"
     
         exit "$code"
+
+    - name: Discord Notification
+      if: always() && secrets.WEBHOOK_URL != ''
+      run: |
+        curl -H "Content-Type: application/json" \
+             -X POST \
+             -d "{\"content\": \"🟢 **HidenCloud Bot**: ¡El servidor de Minecraft fue verificado y renovado exitosamente en HidenCloud! 🎮\"}" \
+             "${{ secrets.WEBHOOK_URL }}"
